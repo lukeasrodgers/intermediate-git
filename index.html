@@ -142,7 +142,7 @@ git checkout -b dev
         <section>
           <p>now we have two branches. what does that mean?</p>
 
-					<pre><code class="hljs" data-trim contenteditable>
+					<pre><code class="hljs bash" data-trim contenteditable>
 $ git branch
 * [1] dev
   [2] master
@@ -161,7 +161,7 @@ $ cat .git/refs/heads/master
           <h2>branches are just files with a commit SHA1 in them</h2>
           <p>so are tags, but tags don't get updated</p>
           <p>this is why git is said to have "light weight" branches</p>
-					<pre><code class="hljs" data-trim contenteditable>
+					<pre><code class="hljs bash" data-trim contenteditable>
 $ echo $(git rev-parse HEAD~1) > .git/refs/heads/newbranch
 $ git checkout newbranch
 					</code></pre>
@@ -179,7 +179,7 @@ $ git checkout newbranch
           <p><code>git reset</code> and <code>git reset --soft</code> basically do the same thing: "go backwards"
           in history without losing changes to files</p>
 
-					<pre><code class="hljs" data-trim contenteditable>
+					<pre><code class="hljs bash" data-trim contenteditable>
 $ git reset $(git rev-parse HEAD~1)
 Unstaged changes after reset:
 M	foo
@@ -193,9 +193,94 @@ $ echo $(git rev-parse HEAD~1) > .git/refs/heads/newbranch
         <section>
           <h2>git reset --hard</h2>
           <p>a.k.a. how to save your ass</p>
-          <p><code>git reset --hard COMMITSHA1</code> just does what we just did *plus* changes the working directory to represent
+          <p><code>git reset --hard COMMITSHA1</code> just does what we just did <em>plus</em> changes the working directory to represent
           the state of code at that commit</p>
           <p>no way to reproduce that by hand-editing files</p>
+        </section>
+
+        <section>
+          <h2>git reflog</h2>
+          <p>Allows you to recover deleted branches, get back to a state you know was clean.</p>
+					<pre><code class="hljs bash" data-trim contenteditable>
+$ git checkout -b newbranch
+$ echo 'new' > new
+$ git add . && git commit -m"new file"
+$ git checkout master
+$ git branch -D new
+$ git branch
+  [1] foo
+  [2] jimbo
+  [3] luke
+* [4] master
+					</code></pre>
+        </section>
+
+        <section>
+          <h2>reflog to the rescue</h2>
+					<pre><code class="hljs bash" data-trim contenteditable>
+$ git reflog -n3
+dc25ab0 HEAD@{0}: checkout: moving from new to master
+42d05b5 HEAD@{1}: commit: new file
+dc25ab0 HEAD@{2}: checkout: moving from master to new
+$ git checkout -b 42d05b5
+Note: checking out '42d05b5'.
+
+You are in 'detached HEAD' state. You can look around, make experimental
+...
+$ git checkout -b new
+					</code></pre>
+        </section>
+
+        <section>
+          <h2>cherry pick</h2>
+          <p>cherry picking allows you to take one commit Y from branch B and insert it into your current branch A, as a new, current commit X, on top of the old HEAD commit, W</p>
+          <ul>
+            <li>git looks at the commit Y's tree and sees the state of the files (blobs) at that point</li>
+            <li>git sees if it can make a new tree, T, that combines/merges the state of the trees at Y and W</li>
+            <li>if it can, it writes new files/blob objects if necessary, and creates a new tree pointing to those blobs</li>
+            <li>it makes a new commit X, which has W as its parent, and T as its tree</li>
+          </ul>
+        </section>
+
+        <section>
+					<pre><code class="hljs bash" data-trim contenteditable>
+$ git checkout master
+$ git log -n1 new
+$ git cherry-pick 0214f55bca73c8898a528c9d355f7df63fad1252
+[master 0157812] fuzz
+ Date: Thu Feb 25 16:01:30 2016 -0500
+ 1 file changed, 1 insertion(+)
+ create mode 100644 fuzz
+$ git cat-file $(git rev-parse HEAD)
+tree 4c6f424ed7b9a2610181b0b51103efc08e674772
+parent c32d642c4c0a40a4f6d72b4b4d8807dde022fe71
+author Luke Rodgers &lt;lukeasrodgers@gmail.com&gt; 1456434090 -0500
+committer Luke Rodgers &lt;lukeasrodgers@gmail.com&gt; 1456500291 -0500
+
+fuzz
+					</code></pre>
+        </section>
+
+        <section>
+          <h2>rebase</h2>
+          <p>rebase basically just streamlines cherry picking</p>
+          <p>instead of 
+					<pre><code class="hljs bash" data-trim contenteditable>
+$ git checkout -b foo
+$ git rev-list master -n3
+015781203ce1cd0901a79826fc5cf3fbce440e3a
+c32d642c4c0a40a4f6d72b4b4d8807dde022fe71
+866e7b3c4406d16e2ae82650a7d97a34de30e37b
+$ git cherry-pick 015781203ce1cd0901a79826fc5cf3fbce440e3a
+$ git cherry-pick c32d642c4c0a40a4f6d72b4b4d8807dde022fe71
+$ git cherry-pick 866e7b3c4406d16e2ae82650a7d97a34de30e37b
+					</code></pre>
+
+          <p>we can</p>
+					<pre><code class="hljs bash" data-trim contenteditable>
+git checkout -b foo
+git rebase master
+					</code></pre>
         </section>
 
 			</div>
